@@ -239,6 +239,23 @@ def has_who(message, user):
     message = f"{person.name} is giving a gift to {giftee.name}"
     slackbot.post_message(message_channel, message)
 
+def print_me(message):
+    """
+    Print out who the given person has
+    """
+    message_channel = message["channel"]
+    person = find_person(f"<@{message['user']}>")
+    if person is None:
+        slackbot.post_message(message_channel, f"Couldn't look you up...")
+        return
+    if not person.participant:
+        slackbot.post_message(message_channel, f"{person.name} is not participating in the Secret Santa")
+        return
+    giftee = ss.has_who(person)
+
+    message = f"You're giving a gift to: {giftee.name}"
+    slackbot.post_message(message_channel, message)
+
 @ensure_admin
 def print_everyone(message, with_allocations=False):
     """
@@ -290,14 +307,27 @@ def send_allocations(message):
     # Send success
     slackbot.post_message(message_channel, "Successfully sent out allocations")
 
+def return_help(message):
+    """
+    Give a usage string for secretsanta bot
+    """
+    message_channel = message["channel"]
+    user = message["user"]
+    if check_admin(user):
+        slackbot.post_message(message_channel, render_template("admin_help.txt"))
+    else:
+        slackbot.post_message(message_channel, render_template("help.txt"))
+
 # And list valid messages
 valid_messages = (
     (re.compile(r"(?:hi|hello) ?(.*)", re.I), say_hi),
     (re.compile(r"update people list", re.I), update_people),
     (re.compile(r"print everyone ?(with allocations)?", re.I), print_everyone),
+    (re.compile(r"who do i have", re.I), print_me),
     (re.compile(r"who has (.+)", re.I), who_has),
     (re.compile(r"who does (.+) have", re.I), has_who),
     (re.compile(r"send out allocations", re.I), send_allocations),
+    (re.compile(r"help", re.I), return_help),
 )
 
 # Reply back to DMs
@@ -308,14 +338,17 @@ def respond(event_data):
     message_type = message.get("channel_type", None)
     message_subtype = message.get("subtype", None)
     message_text = message["text"]
+    message_channel = message["channel"]
 
     # Respond to DM commands
     if message_type == "im" and message_subtype is None:
-        response = f"Got an IM: {message_text}"
         for search, action in valid_messages:
             match = search.fullmatch(message_text)
             if match:
                 action(message, *match.groups())
+                break
+        else:
+            slackbot.post_message(message_channel, "I'm not sure how to respond to that. Type `help` to see what I can do")
 
 if __name__ == "__main__":
     app.env = "development"
