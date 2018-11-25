@@ -1,0 +1,20 @@
+{
+    "text": "Your secret santa is {{ ss_name }}",
+    "delete_original": True,
+    "attachments": [
+        {
+            "fallback": "Oops, something went wrong",
+            "callback_id": "hide_ss",
+            "color": "#008B00",
+            "attachment_type": "default",
+            "actions": [
+                {
+                    "name": "Done",
+                    "text": "Done",
+                    "type": "button",
+                    "value": "Done"
+                }
+            ]
+        }
+    ]
+}

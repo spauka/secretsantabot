@@ -153,10 +153,12 @@ def handle_message():
             channel = payload["channel"]["id"]
             ts = payload["message_ts"]
             ss_name = action["value"]
-            message = f"You're secret santa is: {ss_name}"
 
-            response = {"text": message,
-                        "delete_original": False}
+            response = render_template("reveal_done.txt", ss_name=ss_name)
+            return Response(response, mimetype="application/json")
+        elif callback_id == "hide_ss":
+            response = {"text": "If you ever want to see your secret santa again, just type `who do I have`.",
+                        "delete_original": True}
             return Response(json.dumps(response), mimetype="application/json")
 
 # Create the event handler
@@ -274,8 +276,9 @@ def print_me(message):
         return
     giftee = ss.has_who(person)
 
-    message = f"You're giving a gift to: {giftee.name}"
+    message = "Press the button below to reveal your secret santa: "
     slackbot.post_message(message_channel, message)
+    slackbot.post_message(message_channel, None, attachments=render_template("reveal.txt", ss_name=giftee.name))
 
 @ensure_admin
 def print_everyone(message, with_allocations=False):
