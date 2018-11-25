@@ -1,0 +1,4 @@
+slackclient
+slackeventsapi
+flask
+tabulate
