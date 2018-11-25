@@ -58,23 +58,29 @@ def find_person(person_str):
             return person
     return None
 
-def check_admin(f):
+def check_admin(userid):
+    """
+    Check if a given user id is an admin
+    """
+    admins = ss_conf["admins"].strip().split()
+    return userid in admins
+
+def ensure_admin(f):
     """
     Decorator that checks whether a user is an admin before allowing
     them access to secret information.
     """
-    def check_admin_wrapped(message, *args):
+    def ensure_admin_wrapped(message, *args):
         message_channel = message["channel"]
         user = message.get("user", None)
         if user is None:
             slackbot.post_message(message_channel, "Oops, couldn't check user...")
-        admins = ss_conf["admins"].strip().split()
-        if user in admins:
+        if check_admin(user):
             f(message, *args)
         else:
             slackbot.post_message(message_channel, "Ah ah ah, you didn't say the magic word...")
 
-    return check_admin_wrapped
+    return ensure_admin_wrapped
 
 ###
 # Flask App
@@ -149,7 +155,7 @@ def say_hi(message, usr_msg):
 
     slackbot.post_message(message_channel, f"Hi {realname}.")
 
-@check_admin
+@ensure_admin
 def update_people(message):
     """
     Update the list of people, filling in Slack_ID's for people whos full names match
@@ -192,7 +198,7 @@ def update_people(message):
     # And update output
     slackbot.post_message(message_channel, "Updated users list")
 
-@check_admin
+@ensure_admin
 def who_has(message, user):
     """
     Print out who has a given person
@@ -213,7 +219,7 @@ def who_has(message, user):
     message = f"{person.name} is getting a gift from {gifter.name}"
     slackbot.post_message(message_channel, message)
 
-@check_admin
+@ensure_admin
 def has_who(message, user):
     """
     Print out who the given person has
@@ -233,7 +239,7 @@ def has_who(message, user):
     message = f"{person.name} is giving a gift to {giftee.name}"
     slackbot.post_message(message_channel, message)
 
-@check_admin
+@ensure_admin
 def print_everyone(message, with_allocations=False):
     """
     Print out a list of everyone, optionally with allocations.
@@ -259,7 +265,7 @@ def print_everyone(message, with_allocations=False):
     message += "```"
     slackbot.post_message(message_channel, message)
 
-@check_admin
+@ensure_admin
 def send_allocations(message):
     """
     Send out allocations to everyone
@@ -281,6 +287,9 @@ def send_allocations(message):
             # We have to send out an email instead
             pass
 
+    # Send success
+    slackbot.post_message(message_channel, "Successfully sent out allocations")
+
 # And list valid messages
 valid_messages = (
     (re.compile(r"(?:hi|hello) ?(.*)", re.I), say_hi),
@@ -288,7 +297,7 @@ valid_messages = (
     (re.compile(r"print everyone ?(with allocations)?", re.I), print_everyone),
     (re.compile(r"who has (.+)", re.I), who_has),
     (re.compile(r"who does (.+) have", re.I), has_who),
-    (re.compile(r"send out allocations"), send_allocations),
+    (re.compile(r"send out allocations", re.I), send_allocations),
 )
 
 # Reply back to DMs
