@@ -7,7 +7,7 @@ First, a quick recap of the rules:
  - There is a $25 UPPER limit on gifts, but remember that gifts can be creative as well, they don't have to cost money at all.
  - Gifts should be given anonymously, so clearly indicate on the wrapping who it is for.
 
-OK, that's it for rules, your secret santa for this year is: {{ ss_name }}
+OK, that's it for rules, once you're alone, press the button below to see who you have!
 
 Keep it secret and good luck!
 

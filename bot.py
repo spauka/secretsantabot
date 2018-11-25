@@ -51,14 +51,14 @@ class Bot(object):
                 return channel["id"]
         return None
 
-    def post_message(self, channel, message):
+    def post_message(self, channel, message, attachments=None):
         """
         Post a message to the given channel
         Args:
             channel: channel id to send the message to
             message: the text of the message
         """
-        self.client.api_call("chat.postMessage", channel=channel, text=message)
+        self.client.api_call("chat.postMessage", channel=channel, text=message, attachments=attachments)
 
     def auth(self, code):
         """

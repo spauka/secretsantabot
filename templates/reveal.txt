@@ -1,0 +1,16 @@
+[
+    {
+        "fallback": "Oops, something went wrong",
+        "callback_id": "reveal_ss",
+        "color": "#008B00",
+        "attachment_type": "default",
+        "actions": [
+            {
+                "name": "reveal",
+                "text": "Reveal Name",
+                "type": "button",
+                "value": "{{ ss_name }}"
+            }
+        ]
+    }
+]

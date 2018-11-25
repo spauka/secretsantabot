@@ -3,7 +3,7 @@ import json
 import re
 from operator import attrgetter
 
-from flask import Flask, request, render_template, make_response
+from flask import Flask, request, render_template, Response
 from slackeventsapi import SlackEventAdapter
 import tabulate
 
@@ -137,6 +137,27 @@ def thanks():
         config.write(configfile)
 
     return render_template("thanks.html")
+
+@app.route("/messages", methods=["GET", "POST"])
+def handle_message():
+    """
+    This route is used to handle interactive messages
+    """
+    payload = json.loads(request.form['payload'])
+
+    if payload['type'] == "interactive_message":
+        callback_id = payload['callback_id']
+        if callback_id == "reveal_ss":
+            # Replace button with name of giftee
+            action = payload["actions"][0]
+            channel = payload["channel"]["id"]
+            ts = payload["message_ts"]
+            ss_name = action["value"]
+            message = f"You're secret santa is: {ss_name}"
+
+            response = {"text": message,
+                        "delete_original": False}
+            return Response(json.dumps(response), mimetype="application/json")
 
 # Create the event handler
 slack_events_adapter = SlackEventAdapter(slackbot.signing_secret, '/listening', app)
@@ -297,9 +318,9 @@ def send_allocations(message):
         # Check if they have a slack ID
         if person.slack_id is not None and person.slack_id != "None":
             dm_id = slackbot.open_dm(person.slack_id)
-            slackbot.post_message(dm_id, render_template("message.txt",
-                                                         realname=realname,
-                                                         ss_name=ss_name))
+            message = render_template("message.txt", realname=realname)
+            slackbot.post_message(dm_id, message)
+            slackbot.post_message(dm_id, None, attachments=render_template("reveal.txt", ss_name=ss_name))
         else:
             # We have to send out an email instead
             pass
@@ -337,7 +358,7 @@ def respond(event_data):
     message = event_data["event"]
     message_type = message.get("channel_type", None)
     message_subtype = message.get("subtype", None)
-    message_text = message["text"]
+    message_text = message.get("text", "")
     message_channel = message["channel"]
 
     # Respond to DM commands
