@@ -1,6 +1,8 @@
 """
 Slack chat bot for secret santa
 """
+from functools import lru_cache
+
 from slackclient import SlackClient
 
 class Bot(object):
@@ -25,9 +27,7 @@ class Bot(object):
         # authenticated
         self.client = SlackClient("")
 
-        # Store messages we've sent
-        self.messages = {}
-
+    @lru_cache()
     def open_dm(self, user):
         """
         Open a direct chat with the given user.
@@ -36,8 +36,20 @@ class Bot(object):
         resp = self.client.api_call("im.open", user=user)
         if not resp["ok"]:
             raise RuntimeError(f"Failed to open dm with {user}")
-        else:
-            return resp["channel"]["id"]
+        return resp["channel"]["id"]
+
+    @lru_cache()
+    def get_channel_by_name(self, handle):
+        """
+        Get the id of the channel with given handle
+        """
+        resp = self.client.api_call("conversations.list", exclude_archived=True, types="public_channel")
+        if not resp["ok"]:
+            raise RuntimeError(f"Failed to load channels")
+        for channel in resp["channels"]:
+            if channel["name"] == handle:
+                return channel["id"]
+        return None
 
     def post_message(self, channel, message):
         """
