@@ -312,6 +312,21 @@ def print_everyone(message, with_allocations=False):
         slackbot.post_message(message_channel, f"```\n{message}\n```")
 
 @ensure_admin
+def reset_seen(message):
+    """
+    Reset seen indicators for everyone
+    """
+    message_channel = message["channel"]
+
+    # Loop over people
+    for person in people:
+        person.seen = False
+    # Output people list
+    write_people(ss_conf["people_list"], people)
+
+    slackbot.post_message(message_channel, "Reset seen indicators")
+
+@ensure_admin
 def send_allocations(message):
     """
     Send out allocations to everyone
@@ -365,6 +380,18 @@ def send_admin_help(message, user):
     slackbot.post_message(dm_id, message)
     slackbot.post_message(message_channel, f"Sent admin welcome message to {person.name}")
 
+@ensure_admin
+def reload_people(message):
+    """
+    Reload the people list from file
+    """
+    message_channel = message["channel"]
+    with app.app_context():
+        people = read_people(ss_conf['people_list'],
+                            ss_conf.getboolean('has_headers'))
+        ss = refresh_secretsanta(people, ss_conf["seed"])
+    slackbot.post_message(message_channel, "Reloaded people list")
+
 def return_help(message):
     """
     Give a usage string for secretsanta bot
@@ -386,6 +413,8 @@ valid_messages = (
     (re.compile(r"who does (.+) have", re.I), has_who),
     (re.compile(r"send out allocations", re.I), send_allocations),
     (re.compile(r"send admin help to (.+)", re.I), send_admin_help),
+    (re.compile(r"reload people", re.I), reload_people),
+    (re.compile(r"reset seen", re.I), reset_seen),
     (re.compile(r"help", re.I), return_help),
 )
 
