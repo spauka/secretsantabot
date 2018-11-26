@@ -23,6 +23,8 @@ def read_people(fname, has_headers=True):
         if has_headers:
             fhandle.readline()
         for line in fhandle:
+            if not line.strip():
+                continue
             people.append(secretsanta.Person.from_str(line.strip()))
     return people
 
