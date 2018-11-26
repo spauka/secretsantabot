@@ -151,8 +151,6 @@ def handle_message():
         if callback_id == "reveal_ss":
             # Replace button with name of giftee
             action = payload["actions"][0]
-            channel = payload["channel"]["id"]
-            ts = payload["message_ts"]
             ss_name = action["value"]
 
             response = render_template("reveal_done.txt", ss_name=ss_name)
@@ -273,7 +271,7 @@ def print_me(message):
         slackbot.post_message(message_channel, f"Couldn't look you up...")
         return
     if not person.participant:
-        slackbot.post_message(message_channel, f"{person.name} is not participating in the Secret Santa")
+        slackbot.post_message(message_channel, f"I didn't find you in the secret santa...")
         return
     giftee = ss.has_who(person)
 
