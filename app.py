@@ -2,6 +2,7 @@ import configparser
 import json
 import re
 from operator import attrgetter
+from math import ceil
 
 from flask import Flask, request, render_template, Response
 from slackeventsapi import SlackEventAdapter
@@ -301,10 +302,10 @@ def print_everyone(message, with_allocations=False):
         output.append(info)
 
     # And reply with the allocations
-    message = "People are: \n```"
-    message += tabulate.tabulate(output, headers)
-    message += "```"
-    slackbot.post_message(message_channel, message)
+    slackbot.post_message(message_channel, "People are: ")
+    for i in range(ceil(len(output)/25)):
+        message = tabulate.tabulate(output[i*25:(i+1)*25], headers)
+        slackbot.post_message(message_channel, f"```\n{message}\n```")
 
 @ensure_admin
 def send_allocations(message):
