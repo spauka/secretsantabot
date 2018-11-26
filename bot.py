@@ -26,6 +26,7 @@ class Bot(object):
         # Create a blank slack client, that will be filled once we've
         # authenticated
         self.client = SlackClient("")
+        self.bot_user_id = ""
 
     @lru_cache()
     def open_dm(self, user):
@@ -43,7 +44,7 @@ class Bot(object):
         """
         Get the id of the channel with given handle
         """
-        resp = self.client.api_call("conversations.list", exclude_archived=True, types="public_channel")
+        resp = self.client.api_call("conversations.list", exclude_archived=True, types="public_channel,private_channel")
         if not resp["ok"]:
             raise RuntimeError(f"Failed to load channels")
         for channel in resp["channels"]:
@@ -96,6 +97,7 @@ class Bot(object):
         # Then we'll reconnect to the Slack Client with the correct team's
         # bot token
         self.client = SlackClient(authentication["bot_token"])
+        self.bot_user_id = auth_response["bot"]["bot_user_id"]
 
         # Return the authentication for storage
         return authentication

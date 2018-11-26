@@ -1,13 +1,13 @@
 Hey Everyone,
 
-Secret santa allocations have just been sent out to everyone. You should get a message from me (@secretsantabot) with the name of the person you are gifting.
+Secret santa allocations have just been sent out to everyone. You should get a message from me (<@{{ secretsantabot }}>) with the name of the person you are gifting.
 
 First, a quick recap of the rules:
  - Gifts will be exchanged at the QNL Christmas Party, on Friday the 14th of December. That's a little under 3 weeks from today.
  - There is a $20 UPPER limit on gifts, but remember that gifts can be creative as well, they don't have to cost money at all.
  - Gifts should be given anonymously, so clearly indicate on the wrapping who it is for.
 
-If you didn't get a name and you think you should have, or if you run into any problems, talk to @spauka.
+If you didn't get a name and you think you should have, or if you run into any problems, talk to <@{{admin}}>.
 
 Happy Gifting!
 

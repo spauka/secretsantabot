@@ -107,6 +107,7 @@ with app.app_context():
     active_team = slack_conf.get("active_team", None)
     if active_team is not None:
         slackbot.client = bot.SlackClient(config[active_team]["bot_token"])
+        slackbot.bot_user_id = config[active_team]["bot_user_id"]
 
 @app.route("/install", methods=["GET"])
 def pre_install():
@@ -394,6 +395,19 @@ def reload_people(message):
         ss = refresh_secretsanta(people, ss_conf["seed"])
     slackbot.post_message(message_channel, "Reloaded people list")
 
+@ensure_admin
+def post_welcome_message(message):
+    """
+    Post a getting started message to general
+    """
+    message_channel = message["channel"]
+    general = slackbot.get_channel_by_name("general")
+    if general is None:
+        slackbot.post_message(message_channel, "Couldn't find channel")
+        return
+    slackbot.post_message(general, render_template("general_message.txt", secretsantabot=slackbot.bot_user_id, admin=find_person("Sebastian Pauka").slack_id))
+    slackbot.post_message(message_channel, "Welcome message sent!")
+
 def return_help(message):
     """
     Give a usage string for secretsanta bot
@@ -415,6 +429,7 @@ valid_messages = (
     (re.compile(r"who does (.+) have", re.I), has_who),
     (re.compile(r"send out allocations", re.I), send_allocations),
     (re.compile(r"send admin help to (.+)", re.I), send_admin_help),
+    (re.compile(r"post welcome message", re.I), post_welcome_message),
     (re.compile(r"reload people", re.I), reload_people),
     (re.compile(r"reset seen", re.I), reset_seen),
     (re.compile(r"help", re.I), return_help),

@@ -16,4 +16,5 @@ There's also some functions that deal with everyone:
 - `reload people` - reload people list from file
 - `reset seen` - reset seen indicators on everyone
 - `send out allocations` - send messages to everyone with their secret santa allocations
+- `post welcome message` - post the getting started message to #general
 - `send admin help to <name>` - send admin help to a person
