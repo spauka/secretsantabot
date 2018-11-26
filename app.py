@@ -347,7 +347,7 @@ def send_allocations(message):
             slackbot.post_message(dm_id, None, attachments=render_template("reveal.txt", ss_name=ss_name))
         elif person.email is not None and person.email != "None":
             # We have to send out an email instead
-            pass
+            slackbot.post_message(message_channel, f"*WARNING: Send email to {realname} manually, I don't know how to do it yet...")
         else:
             slackbot.post_message(message_channel, f"*WARNING*: I don't have contact details for {realname}")
 
