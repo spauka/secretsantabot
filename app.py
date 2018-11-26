@@ -2,6 +2,7 @@ import configparser
 import json
 import re
 from operator import attrgetter
+from math import ceil
 
 from flask import Flask, request, render_template, Response
 from slackeventsapi import SlackEventAdapter
@@ -62,7 +63,7 @@ def check_admin(userid):
     """
     Check if a given user id is an admin
     """
-    admins = ss_conf["admins"].strip().split()
+    admins = ss_conf["admins"].strip().split(',')
     return userid in admins
 
 def ensure_admin(f):
@@ -191,7 +192,7 @@ def update_people(message):
     members = resp["members"]
     for member in members:
         username = member["name"]
-        realname = member["real_name"]
+        realname = member.get("real_name", "")
         userid = member["id"]
         email = member["profile"].get("email", "None")
         if member["is_bot"] or userid == "USLACKBOT":
@@ -299,10 +300,10 @@ def print_everyone(message, with_allocations=False):
         output.append(info)
 
     # And reply with the allocations
-    message = "People are: \n```"
-    message += tabulate.tabulate(output, headers)
-    message += "```"
-    slackbot.post_message(message_channel, message)
+    slackbot.post_message(message_channel, "People are: ")
+    for i in range(ceil(len(output)/25)):
+        message = tabulate.tabulate(output[i*25:(i+1)*25], headers)
+        slackbot.post_message(message_channel, f"```\n{message}\n```")
 
 @ensure_admin
 def send_allocations(message):
