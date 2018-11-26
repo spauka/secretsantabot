@@ -332,6 +332,29 @@ def send_allocations(message):
     # Send success
     slackbot.post_message(message_channel, "Successfully sent out allocations")
 
+@ensure_admin
+def send_admin_help(message, user):
+    """
+    Send out the admin help message to a user
+    """
+    message_channel = message["channel"]
+
+    # Find the person we want to send the message to
+    person = find_person(user)
+    if person is None:
+        slackbot.post_message(message_channel, f"Couldn't find the user {user}...")
+        return
+    if person.slack_id is None or person.slack_id == "None":
+        slackbot.post_message(message_channel, f"User {user} is not on slack")
+        return
+    if not check_admin(person.slack_id):
+        slackbot.post_message(message_channel, f"User {user} is not an admin... I won't send them the help!")
+        return
+    dm_id = slackbot.open_dm(person.slack_id)
+    message = render_template("admin_reveal.txt", realname=person.name)
+    slackbot.post_message(dm_id, message)
+    slackbot.post_message(message_channel, f"Sent admin welcome message to {person.name}")
+
 def return_help(message):
     """
     Give a usage string for secretsanta bot
@@ -352,6 +375,7 @@ valid_messages = (
     (re.compile(r"who has (.+)", re.I), who_has),
     (re.compile(r"who does (.+) have", re.I), has_who),
     (re.compile(r"send out allocations", re.I), send_allocations),
+    (re.compile(r"send admin help to (.+)", re.I), send_admin_help),
     (re.compile(r"help", re.I), return_help),
 )
 

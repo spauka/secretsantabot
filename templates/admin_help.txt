@@ -10,3 +10,4 @@ Try the following commands, replacing <name> with either a persons full name or 
 *Admin Functions*
  - `update people list` - pull people from slack
  - `send out allocations` - send messages to everyone with their secret santa allocations
+ - `send admin help to <name>` - send admin help to a person
