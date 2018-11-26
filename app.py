@@ -62,7 +62,7 @@ def check_admin(userid):
     """
     Check if a given user id is an admin
     """
-    admins = ss_conf["admins"].strip().split()
+    admins = ss_conf["admins"].strip().split(',')
     return userid in admins
 
 def ensure_admin(f):
@@ -193,7 +193,7 @@ def update_people(message):
     members = resp["members"]
     for member in members:
         username = member["name"]
-        realname = member["real_name"]
+        realname = member.get("real_name", "")
         userid = member["id"]
         email = member["profile"].get("email", "None")
         if member["is_bot"] or userid == "USLACKBOT":
