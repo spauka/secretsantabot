@@ -31,7 +31,7 @@ def write_people(fname, people):
     Write out a person list
     """
     with open(fname, "w") as fhandle:
-        fhandle.write("Name, Slack ID, email, force_email\n")
+        fhandle.write("Name, Slack ID, email, force_email, participant, seen\n")
         fhandle.write("\n".join(str(person) for person in people))
 
 def refresh_secretsanta(people, seed):
@@ -151,9 +151,16 @@ def handle_message():
         if callback_id == "reveal_ss":
             # Replace button with name of giftee
             action = payload["actions"][0]
-            ss_name = action["value"]
+            name = action["value"]
+            person = find_person(name)
+            giftee = ss.has_who(person)
 
-            response = render_template("reveal_done.txt", ss_name=ss_name)
+            # Update the persons seen status if necessary
+            if not person.seen:
+                person.seen = True
+                write_people(ss_conf["people_list"], people)
+
+            response = render_template("reveal_done.txt", ss_name=giftee.name)
             return Response(response, mimetype="application/json")
         elif callback_id == "hide_ss":
             response = {"text": "If you ever want to see your secret santa again, just type `who do I have`.",
@@ -273,11 +280,10 @@ def print_me(message):
     if not person.participant:
         slackbot.post_message(message_channel, f"I didn't find you in the secret santa...")
         return
-    giftee = ss.has_who(person)
 
     message = "Press the button below to reveal your secret santa: "
     slackbot.post_message(message_channel, message)
-    slackbot.post_message(message_channel, None, attachments=render_template("reveal.txt", ss_name=giftee.name))
+    slackbot.post_message(message_channel, None, attachments=render_template("reveal.txt", name=person.name))
 
 @ensure_admin
 def print_everyone(message, with_allocations=False):
@@ -285,14 +291,14 @@ def print_everyone(message, with_allocations=False):
     Print out a list of everyone, optionally with allocations.
     """
     message_channel = message["channel"]
-    headers = ("Name", "Email", "Participating?")
+    headers = ("Name", "Email", "Participating?", "Seen?")
     if with_allocations:
         headers += ("Is Gifting","Getting a gift from")
 
     # Fill in output
     output = []
     for person in sorted(people, key=attrgetter("normalized_name")):
-        info = (person.name, person.email, person.participant)
+        info = (person.name, person.email, person.participant, person.seen)
         if with_allocations and person.participant:
             info += (ss.has_who(person).name, ss.who_has(person).name)
         elif with_allocations and not person.participant:
@@ -314,7 +320,8 @@ def send_allocations(message):
 
     # Loop over the list of participants
     for person in ss.secret_santa:
-        # Figure out who they have
+        # Figure out who they have, and reset seen status
+        person.seen = False
         realname = person.name
         ss_name = ss.has_who(person).name
         # Check if they have a slack ID
@@ -323,9 +330,14 @@ def send_allocations(message):
             message = render_template("message.txt", realname=realname)
             slackbot.post_message(dm_id, message)
             slackbot.post_message(dm_id, None, attachments=render_template("reveal.txt", ss_name=ss_name))
-        else:
+        elif person.email is not None and person.email != "None":
             # We have to send out an email instead
             pass
+        else:
+            slackbot.post_message(message_channel, f"*WARNING*: I don't have contact details for {realname}")
+
+    # Output people list
+    write_people(ss_conf["people_list"], people)
 
     # Send success
     slackbot.post_message(message_channel, "Successfully sent out allocations")

@@ -6,7 +6,7 @@ class Person(object):
     """
     Keep track of people and their related properties
     """
-    def __init__(self, name, slack_id=None, email=None, force_email=False, participant=False):
+    def __init__(self, name, slack_id=None, email=None, force_email=False, participant=False, seen=False):
         """
         Create a person
         Args:
@@ -20,6 +20,7 @@ class Person(object):
         self.email = email
         self.force_email = force_email
         self.participant = participant
+        self.seen = seen
 
     @classmethod
     def from_str(cls, str_repr, delim=",", strip_whitespace=True):
@@ -32,6 +33,7 @@ class Person(object):
         # Convert use_email and participant to bool
         data[3] = True if data[3].lower() == "true" else False
         data[4] = True if data[4].lower() == "true" else False
+        data[5] = True if data[5].lower() == "true" else False
         return cls(*data)
 
     def __repr__(self):
@@ -39,7 +41,7 @@ class Person(object):
 
     def __str__(self):
         return ", ".join(str(d) for d in (self.name, self.slack_id, self.email,
-                                          self.force_email, self.participant))
+                                          self.force_email, self.participant, self.seen))
 
     def __hash__(self):
         return hash(self.normalized_name)
@@ -62,7 +64,7 @@ class Person(object):
         """
         if self.force_email:
             return True
-        if self.slack_id is None and self.email:
+        if (self.slack_id is None or self.slack_id == "None") and self.email:
             return True
         return False
 

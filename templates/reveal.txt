@@ -9,7 +9,7 @@
                 "name": "reveal",
                 "text": "Reveal Name",
                 "type": "button",
-                "value": "{{ ss_name }}"
+                "value": "{{ name }}"
             }
         ]
     }
