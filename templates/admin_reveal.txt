@@ -2,19 +2,4 @@ Hey {{realname}}!
 
 You're an admin for the Secret Santa, so you can see a bit more information than everyone else.
 
-If you ever need some extra information, give me the following commands, replacing <name> with either a persons full name or their slack handle (@ them):
-*Check Allocations*
-- `who has <name>`
-- `who does <name> have`
-- `print everyone` - list of people in the team
-- `print everyone with allocations` - list of people and who they have
-- `who do I have` - the usual check
-
-There's also some functions that deal with everyone:
-*Admin Functions*
-- `update people list` - pull people from slack
-- `reload people` - reload people list from file
-- `reset seen` - reset seen indicators on everyone
-- `send out allocations` - send messages to everyone with their secret santa allocations
-- `post welcome message` - post the getting started message to #general
-- `send admin help to <name>` - send admin help to a person
+{% include 'admin_commands.txt' %}
