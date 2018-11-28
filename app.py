@@ -85,6 +85,17 @@ def ensure_admin(f):
 
     return ensure_admin_wrapped
 
+def send_allocation(channel, message, name):
+    """
+    Send out an allocation to an individual with a given message.
+    Args:
+     - channel: channel_id for the channel to post to
+     - message: the message to accompy the allocation
+     - name: name of the person to whom the message will be sent
+    """
+    slackbot.post_message(channel, message)
+    slackbot.post_message(channel, None, attachments=render_template("reveal.txt", name=name))
+
 ###
 # Flask App
 ###
@@ -156,6 +167,8 @@ def handle_message():
             action = payload["actions"][0]
             name = action["value"]
             person = find_person(name)
+            if person is None:
+                return Response("Couldn't find your secret santa. Try ask me again!")
             giftee = ss.has_who(person)
 
             # Update the persons seen status if necessary
@@ -285,8 +298,7 @@ def print_me(message):
         return
 
     message = "Press the button below to reveal your secret santa: "
-    slackbot.post_message(message_channel, message)
-    slackbot.post_message(message_channel, None, attachments=render_template("reveal.txt", name=person.name))
+    send_allocation(message_channel, message, person.name)
 
 @ensure_admin
 def print_everyone(message, with_allocations=False):
@@ -334,6 +346,7 @@ def send_allocations(message):
     """
     Send out allocations to everyone
     """
+    return
     message_channel = message["channel"]
 
     # Loop over the list of participants
@@ -341,16 +354,14 @@ def send_allocations(message):
         # Figure out who they have, and reset seen status
         person.seen = False
         realname = person.name
-        ss_name = ss.has_who(person).name
         # Check if they have a slack ID
         if person.slack_id is not None and person.slack_id != "None":
             dm_id = slackbot.open_dm(person.slack_id)
             message = render_template("message.txt", realname=realname)
-            slackbot.post_message(dm_id, message)
-            slackbot.post_message(dm_id, None, attachments=render_template("reveal.txt", ss_name=ss_name))
+            send_allocation(dm_id, message, realname)
         elif person.email is not None and person.email != "None":
             # We have to send out an email instead
-            slackbot.post_message(message_channel, f"*WARNING: Send email to {realname} manually, I don't know how to do it yet...")
+            slackbot.post_message(message_channel, f"*WARNING*: Send email to {realname} manually, I don't know how to do it yet...")
         else:
             slackbot.post_message(message_channel, f"*WARNING*: I don't have contact details for {realname}")
 
@@ -359,6 +370,33 @@ def send_allocations(message):
 
     # Send success
     slackbot.post_message(message_channel, "Successfully sent out allocations")
+
+@ensure_admin
+def send_allocation_to(message, person):
+    """
+    Send out an allocation to a specific person
+    """
+    message_channel = message["channel"]
+
+    person = find_person(person)
+    if person is None:
+        slackbot.post_message(message_channel, f"Couldn't find {person}...")
+        return
+
+    person.seen = False
+    realname = person.name
+    if person.slack_id is not None and person.slack_id != "None":
+        dm_id = slackbot.open_dm(person.slack_id)
+        message = render_template("message.txt", realname=realname)
+        send_allocation(dm_id, message, realname)
+        slackbot.post_message(message_channel, f"Sent allocation to {realname}")
+    elif person.email is not None and person.email != None:
+        slackbot.post_message(message_channel, f"*WARNING*: Send email to {realname} manually, I don't know how to do it yet...")
+    else:
+        slackbot.post_message(message_channel, f"*WARNING*: I don't have contact details for {realname}")
+
+    # Output people list
+    write_people(ss_conf["people_list"], people)
 
 @ensure_admin
 def send_admin_help(message, user):
@@ -428,6 +466,7 @@ valid_messages = (
     (re.compile(r"who has (.+)", re.I), who_has),
     (re.compile(r"who does (.+) have", re.I), has_who),
     (re.compile(r"send out allocations", re.I), send_allocations),
+    (re.compile(r"send allocation to (.+)", re.I), send_allocation_to),
     (re.compile(r"send admin help to (.+)", re.I), send_admin_help),
     (re.compile(r"post welcome message", re.I), post_welcome_message),
     (re.compile(r"reload people", re.I), reload_people),
