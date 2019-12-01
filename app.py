@@ -8,6 +8,7 @@ from flask import Flask, request, render_template, Response
 from slackeventsapi import SlackEventAdapter
 import tabulate
 
+import database
 import secretsanta
 import bot
 
