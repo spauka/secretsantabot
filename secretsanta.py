@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 from operator import attrgetter
 import re
 
@@ -64,28 +65,37 @@ class Person(Base):
         """
         Find a person by their name
         """
-        return cls.query.filter(cls.name == name).one_or_none()
+        return cls.query.filter(cls.name.ilike(name)).one_or_none()
 
     def __repr__(self):
         return f"<Person '{self.name}'>"
 
     def __str__(self):
         return ", ".join(str(d) for d in (self.name, self.slack_id, self.email,
-                                          self.force_email, self.participant, self.seen))
+                                          self.force_email))
 
     def __hash__(self):
         return hash(self.normalized_name)
 
     def __eq__(self, other):
+        if isinstance(other, Participant):
+            other = other.participant
         return self.normalized_name == other.normalized_name
+
+    @classmethod
+    def normalize_name(cls, name):
+        """
+        Return a normalized for of the name
+        """
+        lowername = name.lower()
+        return re.sub('\s+', "", lowername)
 
     @property
     def normalized_name(self):
         """
         Return a normalized form of the name for sorting
         """
-        lowername = self.name.lower()
-        return re.sub('\s+', "", lowername)
+        return self.normalize_name(self.name)
 
     @property
     def should_email(self):
@@ -110,7 +120,7 @@ class SecretSanta(Base):
     id = Column(Integer, Sequence("secretsanta_id_seq"), primary_key=True)
     name = Column(String)
     seed = Column(Integer)
-    participants = relationship(Participant, back_populates="secret_santa")
+    participants = relationship(Participant, back_populates="secret_santa", cascade="save-update,merge,delete,delete-orphan")
     admins = relationship(Person, secondary=secret_santa_admins, back_populates="administers")
 
     def __init__(self, name, people, seed=None):
@@ -129,11 +139,12 @@ class SecretSanta(Base):
         """
         Add a person to the secret santa. This is now safe to do after the ordering has been generated.
         """
+        print(f"Adding participant {person}")
         participant = Participant(participant=person)
         self.participants.append(participant)
         db_session.commit()
 
-    def generate_ordering(self, force=True, reset_seen=True):
+    def generate_ordering(self, force=False, reset_seen=True):
         """
         Generate the ordering for the secret santa, if it has not already been done.
         """
@@ -158,12 +169,25 @@ class SecretSanta(Base):
             if reset_seen:
                 participant.seen = None
         db_session.commit()
+        
+    def update_seen(self, person):
+        """
+        Update the seen indicator for a given person
+        """
+        for participant in self.participants:
+            if participant.participant == person:
+                participant.seen = datetime.now()
+                db_session.commit()
+                break
+        else:
+            raise IndexError("Can't find person {person}")
 
     def get_ordered_list(self):
         """
         Return the ordered list of participants
         """
-        return [p.participant for p in sorted(self.participants, key=attrgetter("ordering"))]
+        participants = (p for p in self.participants if p.ordering is not None)
+        return [p.participant for p in sorted(participants, key=attrgetter("ordering"))]
 
     def has_who(self, person):
         """

@@ -3,3 +3,5 @@ slackeventsapi
 flask
 flask-sqlalchemy
 tabulate
+celery
+redis

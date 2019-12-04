@@ -1,4 +1,4 @@
-Try the following commands, replacing <name> with either a persons full name or their slack handle (@ them):
+Try the following commands, replacing <name> with their full name:
 *Check Allocations*
  - `who has <name>`
  - `who does <name> have`
@@ -6,10 +6,11 @@ Try the following commands, replacing <name> with either a persons full name or 
  - `print everyone with allocations` - list of people and who they have
 
 *Admin Functions*
- - `update people list` - pull people from slack
- - `reload people` - reload people list from file
- - `reset seen` - reset seen indicators on everyone
- - `send out allocations` - send messages to everyone with their secret santa allocations
+ - `start a new secret santa: <name>` - reset everything and start a new secret santa
+ - `do allocations` - assign secret santas
+ - `add person: <name> <<email>>` - add a person not in the slack channel to the secret santa. Note: email is optional.
+ - `add admin: <name>` - make a new person an admin
+ - `send all allocations` - send messages to everyone with their secret santa allocations
  - `send allocation to <name>` - send allocation to a specific person again
  - `post welcome message` - post the getting started message to #general
  - `send admin help to <name>` - send admin help to a person
