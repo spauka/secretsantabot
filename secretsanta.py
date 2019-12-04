@@ -5,7 +5,7 @@ import re
 from sqlalchemy import Table, Column, Integer, String, Boolean, DateTime, \
         Sequence, ForeignKey
 from sqlalchemy.orm import relationship
-from database import Base
+from database import Base, db_session
 
 # Create association table to allow secret-santa instances to associate to a list of people
 class Participant(Base):
@@ -20,6 +20,11 @@ class Participant(Base):
     def __repr__(self):
         return f"<Participant '{self.participant.name}' in SecretSanta '{self.secret_santa.name}' (seen: {self.seen})>"
 
+# Create a list of admins for this secret santa
+secret_santa_admins = Table("admins", Base.metadata,
+        Column("secretsanta_id", ForeignKey("secretsanta.id"), primary_key=True),
+        Column("person_id", ForeignKey("person.id"), primary_key=True))
+
 class Person(Base):
     """
     Keep track of people and their related properties
@@ -31,7 +36,8 @@ class Person(Base):
     slack_id = Column(String)
     email = Column(String)
     force_email = Column(Boolean)
-    secret_santas = relationship("Participant", back_populates="participant", viewonly=True)
+    secret_santas = relationship(Participant, back_populates="participant", viewonly=True)
+    administers = relationship("SecretSanta", secondary=secret_santa_admins, back_populates="admins", viewonly=True)
 
     def __init__(self, name, slack_id, email, force_email=False):
         self.name = name
@@ -52,6 +58,13 @@ class Person(Base):
         data[4] = True if data[4].lower() == "true" else False
         data[5] = True if data[5].lower() == "true" else False
         return cls(*data)
+
+    @classmethod
+    def find_person(cls, name):
+        """
+        Find a person by their name
+        """
+        return cls.query.filter(cls.name == name).one_or_none()
 
     def __repr__(self):
         return f"<Person '{self.name}'>"
@@ -97,17 +110,20 @@ class SecretSanta(Base):
     id = Column(Integer, Sequence("secretsanta_id_seq"), primary_key=True)
     name = Column(String)
     seed = Column(Integer)
-    participants = relationship("Participant", back_populates="secret_santa")
+    participants = relationship(Participant, back_populates="secret_santa")
+    admins = relationship(Person, secondary=secret_santa_admins, back_populates="administers")
 
-    def __init__(self, people, seed=None):
+    def __init__(self, name, people, seed=None):
+        self.name = name
+        self.seed = seed
+
         # People must be a list of Person objects
         if not all(isinstance(x, Person) for x in people):
             raise TypeError("people must be a list of Person objects")
-
         # Store a sorted list of people in the secret santa
         for person in people:
             self.add_participant(person)
-        self.seed = seed
+        db_session.commit()
 
     def add_participant(self, person):
         """
@@ -115,8 +131,9 @@ class SecretSanta(Base):
         """
         participant = Participant(participant=person)
         self.participants.append(participant)
+        db_session.commit()
 
-    def generate_ordering(self, force=True):
+    def generate_ordering(self, force=True, reset_seen=True):
         """
         Generate the ordering for the secret santa, if it has not already been done.
         """
@@ -138,12 +155,15 @@ class SecretSanta(Base):
         # And insert them back into the database
         for place, participant in enumerate(sorted_participants):
             participant.ordering = place*10
+            if reset_seen:
+                participant.seen = None
+        db_session.commit()
 
     def get_ordered_list(self):
         """
         Return the ordered list of participants
         """
-        return sorted(self.participants, key=attrgetter("ordering")
+        return [p.participant for p in sorted(self.participants, key=attrgetter("ordering"))]
 
     def has_who(self, person):
         """
@@ -167,4 +187,4 @@ class SecretSanta(Base):
         secret_santa = self.get_ordered_list()
         i = secret_santa.index(person)-1
         return secret_santa[i%len(secret_santa)]
-#
+
