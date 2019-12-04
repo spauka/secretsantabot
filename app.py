@@ -101,11 +101,14 @@ def handle_message():
             person = team.get_person(payload["user"]["id"])
             if person is None:
                 return Response("Couldn't find your secret santa. Try ask me again!")
-            giftee = team.secret_santa.has_who(person)
-            team.secret_santa.update_seen(person)
+            try:
+                giftee = team.secret_santa.has_who(person)
+                team.secret_santa.update_seen(person)
 
-            response = render_template("reveal_done.txt", ss_name=giftee.name)
-            return Response(response, mimetype="application/json")
+                response = render_template("reveal_done.txt", ss_name=giftee.name)
+                return Response(response, mimetype="application/json")
+            except ValueError:
+                return Response("Couldn't find your secret santa. Try ask me again!")
         elif callback_id == "hide_ss":
             response = {"text": "If you ever want to see your secret santa again, just type `who do I have`.",
                         "delete_original": True}

@@ -10,6 +10,7 @@ Try the following commands, replacing <name> with their full name:
  - `do allocations` - assign secret santas
  - `add person: <name> <<email>>` - add a person not in the slack channel to the secret santa. Note: email is optional.
  - `add admin: <name>` - make a new person an admin
+ - `remove person: <name>` - remove a person from the secret santa.
  - `send all allocations` - send messages to everyone with their secret santa allocations
  - `send allocation to <name>` - send allocation to a specific person again
  - `post welcome message` - post the getting started message to #general
