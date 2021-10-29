@@ -9,7 +9,7 @@ azure-common==1.1.26
 azure-cosmos==3.2.0
 azure-storage-blob==2.1.0
 azure-storage-common==2.1.0
-Babel==2.7.0
+Babel==2.9.1
 -e git+https://github.com/Microsoft/botbuilder-python.git@1ce420b7a15bc6464cac333c2bb938d6ed1a2752#egg=botbuilder_adapters_slack&subdirectory=libraries/botbuilder-adapters-slack
 -e git+https://github.com/Microsoft/botbuilder-python.git@1ce420b7a15bc6464cac333c2bb938d6ed1a2752#egg=botbuilder_ai&subdirectory=libraries/botbuilder-ai
 -e git+https://github.com/Microsoft/botbuilder-python.git@1ce420b7a15bc6464cac333c2bb938d6ed1a2752#egg=botbuilder_applicationinsights&subdirectory=libraries/botbuilder-applicationinsights
