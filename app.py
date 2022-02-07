@@ -63,9 +63,17 @@ async def messages(req: Request) -> Response:
         return json_response(data=response.body, status=response.status)
     return Response(status=HTTPStatus.OK)
 
+async def blank(req: Request) -> Response:
+    return Response(status=HTTPStatus.OK, text="")
+
+async def favicon(req: Request) -> Response:
+    return web.FileResponse('./images/favicon.ico')
+
 
 APP = web.Application(middlewares=[aiohttp_error_middleware])
+APP.router.add_get("/", blank)
 APP.router.add_post("/api/messages", messages)
+APP.router.add_get("/favicon.ico", favicon)
 APP.add_routes([web.static('/images', './images')])
 
 if __name__ == "__main__":

@@ -39,6 +39,7 @@ valid_messages = (
     (re.compile(r"send allocation to (.+)", re.I), "send_allocation_to"),
     (re.compile(r"send admin help to (.+)", re.I), "send_admin_help"),
     (re.compile(r"post welcome message", re.I), "post_welcome_message"),
+    (re.compile(r"send message to ([^\n]+)\n(.*)", re.I), "send_pm_message_to"),
     (re.compile(r"help", re.I), "return_help"),
 )
 
@@ -239,7 +240,8 @@ class TeamsBot(TeamsActivityHandler):
             # Perform the correct update action
             if turn_context.activity.value is not None:
                 if turn_context.activity.value.get("action", None) == "reveal":
-                    return await team.reveal_allocation_card(person, turn_context.activity.reply_to_id)
+                    res = await team.reveal_allocation_card(person, turn_context.activity.reply_to_id)
+                    return self._create_invoke_response(res)
                 if turn_context.activity.value.get("action", None) == "hide":
                     return await turn_context.delete_activity(turn_context.activity.reply_to_id)
 
@@ -309,7 +311,7 @@ class TeamsSecretSantaBase(Base, Bot):
         card = ThumbnailCard(
             title="Your Secret Santa",
             subtitle="Click on the button below to reveal your secret santa!",
-            text="Gifts will be exchanged at Lunch at the Christmas Party on the 18th of December. If you run into any issues let Sebastian Pauka or Alexis George know :D.",
+            text="Gifts will be exchanged at lunch at the End of Year Celebration on the 17th of December. If you run into any issues let Sebastian Pauka or Alexis George know :D.",
             images=[image],
             buttons=[action]
         )
@@ -352,7 +354,8 @@ class TeamsSecretSantaBase(Base, Bot):
         card_to_send = CardFactory.thumbnail_card(card)
         message = MessageFactory.attachment(card_to_send)
         message.id = reply_id
-        return await self.turn_context.update_activity(message)
+        result = await self.turn_context.update_activity(message)
+        return result
 
     async def open_dm(self, person):
         """

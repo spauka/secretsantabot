@@ -21,7 +21,7 @@ class AttrDict(dict):
         raise AttributeError(f"Cannot change configuration parameters at runtime. Please edit to config file instead.")
 
 config = configparser.ConfigParser()
-config.read("/home/spauka/secretsanta/secretsanta.cfg")
+config.read("/home/spauka/secretsantabot/secretsanta.cfg")
 config = AttrDict(config, name="config")
 
 def __getattr__(attr):

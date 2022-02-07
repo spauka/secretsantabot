@@ -75,6 +75,20 @@ class Bot(BotDecorators):
         return await self.post_reply(f"Sent allocation to {name}.")
 
     @BotDecorators.ensure_admin
+    async def send_pm_message_to(self, person, message):
+        """
+        Send a message to an individual
+        """
+        # Find the person
+        participant = self.get_participant_by_name(name)
+        if participant is None:
+            return await self.post_reply(f"Couldn't find {name}")
+
+        dm = await self.open_dm(person)
+        await self.post_dm(dm, message)
+        return await self.post_reply(f"Sent message to {name}")
+
+    @BotDecorators.ensure_admin
     async def send_all_allocations(self, person):
         """
         Send out all allocations
