@@ -84,7 +84,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        print(args, args.path)
         if args.path is None:
             web.run_app(APP, host="localhost", port=config.botframework.port)
         else:
