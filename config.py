@@ -1,6 +1,7 @@
 """
 Config for Secret Santa Bot
 """
+from pathlib import Path
 import configparser
 
 class AttrDict(dict):
@@ -20,8 +21,11 @@ class AttrDict(dict):
             return super().__setattr__(attr, val)
         raise AttributeError(f"Cannot change configuration parameters at runtime. Please edit to config file instead.")
 
+path = Path(__file__).parent.absolute()
+config_path = path / "secretsanta.cfg"
+
 config = configparser.ConfigParser()
-config.read("/home/spauka/secretsantabot/secretsanta.cfg")
+config.read(config_path)
 config = AttrDict(config, name="config")
 
 def __getattr__(attr):
