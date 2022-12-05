@@ -1,4 +1,5 @@
 import sys
+import argparse
 import traceback
 from datetime import datetime
 from http import HTTPStatus
@@ -77,7 +78,16 @@ APP.router.add_get("/favicon.ico", favicon)
 APP.add_routes([web.static('/images', './images')])
 
 if __name__ == "__main__":
+    # Take path to socket from command line
+    parser = argparse.ArgumentParser(description="Secret Santa Bot")
+    parser.add_argument('--path')
+    args = parser.parse_args()
+
     try:
-        web.run_app(APP, host="localhost", port=config.botframework.port)
+        print(args, args.path)
+        if args.path is None:
+            web.run_app(APP, host="localhost", port=config.botframework.port)
+        else:
+            web.run_app(APP, path=args.path)
     except Exception as error:
         raise error
