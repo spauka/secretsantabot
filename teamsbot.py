@@ -6,6 +6,7 @@ import datetime
 import asyncio
 
 import jinja2
+from markupsafe import escape
 from sqlalchemy import Table, Column, Integer, String, Boolean, DateTime, \
         Sequence, ForeignKey
 from sqlalchemy.orm import relationship, backref
@@ -40,6 +41,7 @@ valid_messages = (
     (re.compile(r"send admin help to (.+)", re.I), "send_admin_help"),
     (re.compile(r"post welcome message", re.I), "post_welcome_message"),
     (re.compile(r"send message to ([^\n]+)\n(.*)", re.I), "send_pm_message_to"),
+    (re.compile(r"update members", re.I), "update_members"),
     (re.compile(r"help", re.I), "return_help"),
 )
 
@@ -60,8 +62,8 @@ class TeamsBot(TeamsActivityHandler):
         continuation_token = None
 
         while True:
-            current_page = await TeamsInfo.get_paged_members(
-                turn_context, continuation_token, 100
+            current_page = await TeamsInfo.get_paged_team_members(
+                turn_context, teams_ssb.channel, continuation_token, 100
             )
             continuation_token = current_page.continuation_token
             paged_members.extend(current_page.members)
@@ -74,11 +76,41 @@ class TeamsBot(TeamsActivityHandler):
             if person.user_role == "bot":
                 # Don't bother adding bots
                 continue
-            print(f"Adding person {person}.")
+            # Check if the person is already there
+            p = Person.find_by_chat_id("teams", person.id)
+            if p is not None:
+                print(f"Person {person.name} already in DB")
+                continue
+            print(f"Adding person {person.name}.")
             new_person = Person(person.name, "teams", person.id, person.email)
             db_session.add(new_person)
             teams_ssb.team_members.append(new_person)
         db_session.commit()
+
+    async def update_members(self, turn_context: TurnContext):
+        """
+        This event synchronizes members from the team
+        """
+        # The source must be msteams
+        if turn_context.activity.channel_id != "msteams":
+            return
+
+        # Retrieve the team properties
+        # Channel properties
+        service_url = turn_context.activity.service_url
+        tenant = turn_context.activity.channel_data["tenant"]["id"]
+        channel_id = teams_get_channel_id(turn_context.activity)
+
+        # Find the SecretSanta Instance
+        team = TeamsSecretSantaBase.from_tenant(tenant, turn_context)
+
+        # Update Members
+        await self.fill_members(turn_context, team)
+
+        # Success
+        return await turn_context.send_activity(
+            MessageFactory.text(f"Updated Members")
+        )
 
     async def on_installation_update_add(self, turn_context: TurnContext):
         """
@@ -151,11 +183,13 @@ class TeamsBot(TeamsActivityHandler):
         if team.creator is None:
             raise ValueError(f"Creator is None. Can't forward exception.")
 
+        print("\n".join(tb.format()))
+
         conversation = await team.open_dm(team.creator)
 
         head = f"<p>[on_turn_error] unhandled error:</p>"
         message = "\n".join(tb.format())
-        message = f"<pre>{jinja2.escape(message)}</pre>"
+        message = f"<pre>{escape(message)}</pre>"
 
         await team.post_dm(conversation, f"{head}{message}", m_type="xml")
 
@@ -197,6 +231,8 @@ class TeamsBot(TeamsActivityHandler):
             for search, action in valid_messages:
                 match = search.fullmatch(message_text)
                 if match:
+                    if action == "update_members":
+                        return await self.update_members(turn_context)
                     return await getattr(team, action)(person, *match.groups())
             else:
                 print(f"Unknown message: {message_text}.")
@@ -301,6 +337,13 @@ class TeamsSecretSantaBase(Base, Bot):
         bot.connector_client = None
         return bot
 
+    @classmethod
+    def from_secret_santa_id(cls, secret_santa_id):
+        bot = cls.query.filter(cls.secret_santa_id==secret_santa_id).one()
+        bot.turn_context = None
+        bot.connector_client = None
+        return bot
+
     async def send_allocation_card(self, person):
         """
         Send an allocation card to a specific person
@@ -319,7 +362,7 @@ class TeamsSecretSantaBase(Base, Bot):
         message = MessageFactory.attachment(card_to_send)
 
         # Send the card to the person
-        if person.chat_id == self.turn_context.activity.from_property.id:
+        if self.turn_context is not None and person.chat_id == self.turn_context.activity.from_property.id:
             # We can just use the reply. This is faster than setting up a DM
             return await self.post_reply(message)
         else:
@@ -361,6 +404,8 @@ class TeamsSecretSantaBase(Base, Bot):
         """
         Open a direct chat with the given user.
         """
+        if not hasattr(self, "open_connections"):
+            self.open_connection = {}
         open_connections = getattr(self, "open_connections", {})
         if person in open_connections:
             return open_connections[person]
@@ -368,16 +413,16 @@ class TeamsSecretSantaBase(Base, Bot):
             raise TypeError(f"person should be a Person. Got: {person}")
 
         teams_ref = TeamsChannelAccount(id=person.chat_id)
+        bot_ref = json.loads(self.conversation_reference)["bot"]
         conversation_parameters = ConversationParameters(
             is_group=False,
-            bot=self.turn_context.activity.recipient,
+            bot=bot_ref,
             members=[teams_ref],
             tenant_id=self.tenant
         )
 
         # Create the conversation
         conversation = await self.connector_client.conversations.create_conversation(conversation_parameters)
-        print(f"Conversation: {conversation}")
         open_connections[person] = conversation
         return conversation
 
@@ -447,11 +492,14 @@ class TeamsSecretSantaBase(Base, Bot):
             channel: channel id to send the message to
             message: the text of the message
         """
-        if isinstance(message, Activity):
+        # Check if we are replying to a message, otherwise it should go to the creator
+        if not isinstance(message, Activity):
+            message = MessageFactory.text(message)
+            message.text_format = m_type
+        if self.turn_context is not None:
             return await self.turn_context.send_activity(message)
-        message = MessageFactory.text(message)
-        message.text_format = m_type
-        return await self.turn_context.send_activity(message)
+        creator_dm = await self.open_dm(self.creator)
+        return await self.post_dm(creator_dm, message, m_type)
 
     async def get_all_users(self):
         """

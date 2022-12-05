@@ -1,6 +1,7 @@
 """
 Slack chat bot for secret santa
 """
+import asyncio
 from functools import lru_cache
 from operator import attrgetter
 from math import ceil
@@ -100,19 +101,26 @@ class Bot(BotDecorators):
             return await self.post_reply(f"Drawing hasn't been made")
 
         # Loop through participants and send allocations
+        tasks = []
         for participant in self.secret_santa.participants:
             # Check that the person has been drawn
             if participant.ordering is None:
                 print(f"Skipping {participant}")
-                await self.post_reply("Skipping {participant}")
+                tasks.append(asyncio.create_task(self.post_reply("Participant {participant} not allocated!!")))
                 continue
             # Send their allocation if they have a Slack ID
             if participant.participant.chat_id is not None:
-                await self.send_allocation(participant.participant)
+                tasks.append(asyncio.create_task(self.send_allocation(participant.participant)))
                 print(f"Sent allocation to {participant.participant.name}.")
             else:
-                await self.post_reply(f"Send allocation to {participant.participant.name} manually.")
+                tasks.append(asyncio.create_task(self.post_reply(f"Send allocation to {participant.participant.name} manually.")))
                 print(f"Send allocation to {participant.participant.name} manually.")
+        for task in tasks:
+            try:
+                await task
+            except:
+                continue
+
         return await self.post_reply(f"Done sending allocations!")
 
     @BotDecorators.ensure_admin
@@ -270,7 +278,7 @@ class Bot(BotDecorators):
         await self.post_reply("People are: ")
         for i in range(ceil(len(output)/25)):
             message = tabulate.tabulate(output[i*25:(i+1)*25], headers)
-            await self.post_reply(f"<pre>{message}</pre>")
+            await self.post_reply(f"<pre style=\"overflow: auto; white-space: pre;\"><code>{message}</code></pre>")
 
     @BotDecorators.ensure_admin
     async def send_admin_help(self, op, name):
